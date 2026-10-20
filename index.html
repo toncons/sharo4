@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学習スケジュール & 進捗管理 - Cafe Natural Style</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Zen Maru Gothic & Noto Sans JP for natural feel) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        craft: {
+                            50: '#FAF6F0',
+                            100: '#F4ECE1',
+                            200: '#E8D7C3',
+                            300: '#D3BA9E',
+                            400: '#B89A7B',
+                            500: '#9B7A5D',
+                            800: '#4A3A2C',
+                            900: '#2A1F17',
+                        },
+                        mustard: {
+                            400: '#FACC15',
+                            500: '#EAB308',
+                            600: '#CA8A04',
+                        },
+                        cafedark: '#2D2422',
+                        cafebrown: '#5C4A3E'
+                    },
+                    fontFamily: {
+                        sans: ['Zen Maru Gothic', 'Noto Sans JP', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F4ECE1;
+            color: #4A3A2C;
+        }
+        /* Custom Scrollbar for weekly grid */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #E8D7C3;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #B89A7B;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9B7A5D;
+        }
+    </style>
+</head>
+<body class="text-craft-800 antialiased min-h-screen flex flex-col pb-12">
+
+    <!-- Navigation Bar (Cafe Dark Style) -->
+    <header class="bg-cafedark text-[#F4ECE1] shadow-md sticky top-0 z-50 border-b-2 border-mustard-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-mustard-500 text-cafedark p-2 rounded-xl font-bold shadow-sm">
+                    <i class="fa-solid fa-mug-hot text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg tracking-wide text-amber-50">Study Schedule</h1>
+                    <p class="text-[10px] text-amber-200/70 -mt-1 tracking-widest uppercase">Cafe & Natural Edition</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button id="btn-sync-sheet" onclick="openSyncModal()" class="flex items-center space-x-1.5 bg-craft-800 hover:bg-craft-500 text-amber-100 text-xs sm:text-sm px-3 py-1.5 rounded-xl transition duration-200 border border-craft-500/50 shadow-sm">
+                    <i class="fa-solid fa-file-excel text-mustard-400"></i>
+                    <span class="hidden sm:inline">スプレッドシート連携</span>
+                    <span class="sm:hidden">連携</span>
+                </button>
+                <button onclick="openAddTaskModal()" class="flex items-center space-x-1.5 bg-mustard-500 hover:bg-mustard-400 text-cafedark font-bold text-xs sm:text-sm px-3.5 py-1.5 rounded-xl transition duration-200 shadow-sm">
+                    <i class="fa-solid fa-plus"></i>
+                    <span class="hidden sm:inline">タスク追加</span>
+                    <span class="sm:hidden">追加</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-grow w-full space-y-6">
+
+        <!-- Header KPI / Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-[#FAF6F0] p-4 rounded-2xl shadow-sm border border-craft-200 flex items-center space-x-3.5">
+                <div class="bg-craft-200 p-3 rounded-xl text-craft-800">
+                    <i class="fa-solid fa-book-bookmark text-xl text-cafebrown"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-craft-500 font-medium">登録教材数</p>
+                    <h3 id="kpi-total-materials" class="text-xl font-bold text-cafedark">0</h3>
+                </div>
+            </div>
+            <div class="bg-[#FAF6F0] p-4 rounded-2xl shadow-sm border border-craft-200 flex items-center space-x-3.5">
+                <div class="bg-emerald-100 p-3 rounded-xl text-emerald-800">
+                    <i class="fa-solid fa-circle-check text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-craft-500 font-medium">達成ページ数</p>
+                    <h3 id="kpi-completed-pages" class="text-xl font-bold text-cafedark">0 P</h3>
+                </div>
+            </div>
+            <div class="bg-[#FAF6F0] p-4 rounded-2xl shadow-sm border border-craft-200 flex items-center space-x-3.5">
+                <div class="bg-mustard-400/30 p-3 rounded-xl text-mustard-600">
+                    <i class="fa-solid fa-bullseye text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-craft-500 font-medium">目標ページ数</p>
+                    <h3 id="kpi-target-pages" class="text-xl font-bold text-cafedark">0 P</h3>
+                </div>
+            </div>
+            <div class="bg-[#FAF6F0] p-4 rounded-2xl shadow-sm border border-craft-200 flex items-center space-x-3.5">
+                <div class="bg-amber-100 p-3 rounded-xl text-amber-800">
+                    <i class="fa-solid fa-chart-line text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-craft-500 font-medium">全体達成率</p>
+                    <h3 id="kpi-progress-rate" class="text-xl font-bold text-cafedark">0%</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Schedule Section -->
+        <section class="bg-[#FAF6F0] rounded-2xl shadow-sm border border-craft-200 p-5">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 mb-4 border-b border-craft-200 gap-3">
+                <div class="flex items-center space-x-3">
+                    <h2 class="text-lg font-bold text-cafedark flex items-center gap-2">
+                        <i class="fa-regular fa-calendar-days text-mustard-500"></i>
+                        週間学習スケジュール
+                    </h2>
+                    <span id="current-week-label" class="text-xs font-semibold bg-craft-200 text-craft-800 px-3 py-1 rounded-full border border-craft-300">
+                        今週
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2 self-end sm:self-auto">
+                    <button onclick="changeWeek(-1)" class="p-2 text-craft-800 hover:bg-craft-200 rounded-xl transition border border-craft-300 text-xs sm:text-sm">
+                        <i class="fa-solid fa-chevron-left"></i> 前週
+                    </button>
+                    <button onclick="resetToCurrentWeek()" class="px-3.5 py-1.5 text-xs sm:text-sm font-medium text-craft-800 hover:bg-craft-200 rounded-xl transition border border-craft-300">
+                        今週へ戻る
+                    </button>
+                    <button onclick="changeWeek(1)" class="p-2 text-craft-800 hover:bg-craft-200 rounded-xl transition border border-craft-300 text-xs sm:text-sm">
+                        次週 <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Schedule Grid Table -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <div id="weekly-grid" class="min-w-[700px] grid grid-cols-7 gap-2.5">
+                    <!-- Dynamic rendering by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Progress Charts & Material Status -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Progress Chart (2 columns on large screen) -->
+            <div class="lg:col-span-2 bg-[#FAF6F0] rounded-2xl shadow-sm border border-craft-200 p-5 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-cafedark flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-mustard-500"></i>
+                        学習進捗グラフ (ページ数)
+                    </h2>
+                    <select id="chart-timeframe" onchange="renderChart()" class="text-xs sm:text-sm border border-craft-300 rounded-xl px-3 py-1.5 bg-craft-50 text-craft-800 focus:outline-none focus:ring-2 focus:ring-mustard-500">
+                        <option value="week">今週の記録</option>
+                        <option value="month">過去30日間の記録</option>
+                    </select>
+                </div>
+                <div class="relative w-full h-64 sm:h-72">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Material Progress List (1 column on large screen) -->
+            <div class="bg-[#FAF6F0] rounded-2xl shadow-sm border border-craft-200 p-5 flex flex-col">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-craft-200">
+                    <h2 class="text-lg font-bold text-cafedark flex items-center gap-2">
+                        <i class="fa-solid fa-book text-mustard-500"></i>
+                        教材別進捗
+                    </h2>
+                    <button onclick="openAddMaterialModal()" class="text-xs text-mustard-600 hover:text-mustard-500 font-bold bg-mustard-400/20 px-2.5 py-1 rounded-lg transition">
+                        + 教材追加
+                    </button>
+                </div>
+                <div id="materials-list" class="space-y-3.5 overflow-y-auto max-h-[280px] custom-scrollbar pr-1 flex-grow">
+                    <!-- Dynamic rendering by JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Confirm Material Deletion -->
+    <div id="delete-material-modal" class="fixed inset-0 bg-cafedark/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-[#FAF6F0] rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-craft-300">
+            <div class="text-center">
+                <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                </div>
+                <h3 class="font-bold text-lg text-cafedark mb-1">教材を削除しますか？</h3>
+                <p class="text-xs text-craft-500 mb-4">この教材を削除すると、紐づくすべての学習タスクも一緒に削除されます。</p>
+                <input type="hidden" id="delete-material-id">
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button type="button" onclick="closeModal('delete-material-modal')" class="w-1/2 py-2 text-xs font-bold text-craft-800 hover:bg-craft-200 rounded-xl">キャンセル</button>
+                <button type="button" onclick="confirmDeleteMaterial()" class="w-1/2 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow">削除する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add / Edit Task -->
+    <div id="task-modal" class="fixed inset-0 bg-cafedark/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-[#FAF6F0] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-craft-300">
+            <div class="flex justify-between items-center pb-3 border-b border-craft-200">
+                <h3 id="task-modal-title" class="font-bold text-lg text-cafedark">学習スケジュールの追加</h3>
+                <button onclick="closeModal('task-modal')" class="text-craft-400 hover:text-craft-800 rounded-lg p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <form id="task-form" onsubmit="handleSaveTask(event)" class="mt-4 space-y-4">
+                <input type="hidden" id="task-id">
+                
+                <div>
+                    <label class="block text-xs font-bold text-craft-800 mb-1">対象教材 *</label>
+                    <select id="task-material" required class="w-full border border-craft-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-craft-800 mb-1">学習予定日 *</label>
+                    <input type="date" id="task-date" required class="w-full border border-craft-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-craft-800 mb-1">開始ページ *</label>
+                        <input type="number" id="task-start-page" min="1" required placeholder="例: 10" class="w-full border border-craft-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-craft-800 mb-1">終了予定ページ *</label>
+                        <input type="number" id="task-end-page" min="1" required placeholder="例: 25" class="w-full border border-craft-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-craft-800 mb-1">実際に達成した終了ページ</label>
+                    <input type="number" id="task-completed-page" min="0" placeholder="完了時に記入 (例: 25)" class="w-full border border-craft-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none">
+                    <p class="text-[11px] text-craft-500 mt-1">※ 達成ページを入力すると「達成済み」になります。</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-craft-800 mb-1">メモ・学習内容詳細</label>
+                    <textarea id="task-memo" rows="2" placeholder="例: チャプター2の問題演習" class="w-full border border-craft-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="flex justify-between items-center pt-3 border-t border-craft-200">
+                    <button type="button" id="btn-delete-task" onclick="handleDeleteTask()" class="text-xs text-rose-600 hover:text-rose-800 font-bold hidden">
+                        <i class="fa-solid fa-trash-can mr-1"></i> 削除
+                    </button>
+                    <div class="flex space-x-2 ml-auto">
+                        <button type="button" onclick="closeModal('task-modal')" class="px-4 py-2 text-xs font-bold text-craft-800 hover:bg-craft-200 rounded-xl">キャンセル</button>
+                        <button type="submit" class="px-4 py-2 text-xs font-bold bg-mustard-500 hover:bg-mustard-400 text-cafedark rounded-xl shadow-sm">保存する</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Material -->
+    <div id="material-modal" class="fixed inset-0 bg-cafedark/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-[#FAF6F0] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-craft-300">
+            <div class="flex justify-between items-center pb-3 border-b border-craft-200">
+                <h3 class="font-bold text-lg text-cafedark">新規教材の追加</h3>
+                <button onclick="closeModal('material-modal')" class="text-craft-400 hover:text-craft-800 rounded-lg p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <form id="material-form" onsubmit="handleSaveMaterial(event)" class="mt-4 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-craft-800 mb-1">教材名 *</label>
+                    <input type="text" id="mat-title" required placeholder="例: カフェで学ぶ英会話" class="w-full border border-craft-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-craft-800 mb-1">総ページ数 *</label>
+                    <input type="number" id="mat-total-pages" min="1" required placeholder="例: 250" class="w-full border border-craft-300 rounded-xl px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-craft-800 mb-1">テーマカラー</label>
+                    <div class="flex space-x-2 mt-1.5">
+                        <label class="cursor-pointer"><input type="radio" name="mat-color" value="#EAB308" checked class="peer sr-only"><div class="w-8 h-8 rounded-full bg-yellow-500 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-yellow-600"></div></label>
+                        <label class="cursor-pointer"><input type="radio" name="mat-color" value="#84CC16" class="peer sr-only"><div class="w-8 h-8 rounded-full bg-lime-600 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-lime-700"></div></label>
+                        <label class="cursor-pointer"><input type="radio" name="mat-color" value="#D97706" class="peer sr-only"><div class="w-8 h-8 rounded-full bg-amber-600 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-amber-700"></div></label>
+                        <label class="cursor-pointer"><input type="radio" name="mat-color" value="#991B1B" class="peer sr-only"><div class="w-8 h-8 rounded-full bg-red-800 peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-red-900"></div></label>
+                        <label class="cursor-pointer"><input type="radio" name="mat-color" value="#5C4A3E" class="peer sr-only"><div class="w-8 h-8 rounded-full bg-[#5C4A3E] peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-craft-800"></div></label>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t border-craft-200">
+                    <button type="button" onclick="closeModal('material-modal')" class="px-4 py-2 text-xs font-bold text-craft-800 hover:bg-craft-200 rounded-xl">キャンセル</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-bold bg-mustard-500 hover:bg-mustard-400 text-cafedark rounded-xl shadow-sm">登録する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Spreadsheet Integration -->
+    <div id="sync-modal" class="fixed inset-0 bg-cafedark/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-[#FAF6F0] rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-craft-300">
+            <div class="flex justify-between items-center pb-3 border-b border-craft-200">
+                <h3 class="font-bold text-lg text-cafedark flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-700"></i>
+                    スプレッドシート連携
+                </h3>
+                <button onclick="closeModal('sync-modal')" class="text-craft-400 hover:text-craft-800 rounded-lg p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="mt-4 space-y-5">
+                <!-- Method 1: CSV Export/Import -->
+                <div class="p-4 bg-white/80 rounded-xl border border-craft-200">
+                    <h4 class="text-xs font-bold text-craft-800 uppercase tracking-wider mb-1">1. CSVファイル連携（手動）</h4>
+                    <p class="text-xs text-craft-500 mb-3">GoogleスプレッドシートやExcelで相互インポート可能なCSVファイル形式です。</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="exportToCSV()" class="bg-craft-100 hover:bg-craft-200 border border-craft-300 text-craft-800 text-xs px-3 py-2 rounded-xl font-bold flex items-center space-x-1 shadow-sm">
+                            <i class="fa-solid fa-download text-mustard-600"></i>
+                            <span>CSVを出力</span>
+                        </button>
+                        <label class="bg-craft-100 hover:bg-craft-200 border border-craft-300 text-craft-800 text-xs px-3 py-2 rounded-xl font-bold flex items-center space-x-1 shadow-sm cursor-pointer">
+                            <i class="fa-solid fa-upload text-emerald-700"></i>
+                            <span>CSVを読み込み</span>
+                            <input type="file" id="csv-file-input" accept=".csv" onchange="importFromCSV(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Method 2: Google Apps Script (API Webhook) -->
+                <div class="p-4 bg-white/80 rounded-xl border border-craft-200">
+                    <h4 class="text-xs font-bold text-craft-800 uppercase tracking-wider mb-1">2. Google Apps Script (GAS) リアルタイム連携</h4>
+                    <p class="text-xs text-craft-500 mb-2">GoogleスプレッドシートのWebアプリURL (GAS Webhook) を登録するとダイレクトに同期します。</p>
+                    <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border border-craft-300 rounded-xl px-3 py-2 text-xs bg-white focus:ring-2 focus:ring-mustard-500 focus:outline-none mb-3">
+                    <div class="flex justify-between items-center">
+                        <button onclick="saveGasUrl()" class="bg-cafedark hover:bg-craft-800 text-amber-50 text-xs px-3 py-1.5 rounded-xl font-bold shadow-sm">
+                            URL保存
+                        </button>
+                        <button onclick="syncWithGAS()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-sm flex items-center gap-1">
+                            <i class="fa-solid fa-rotate"></i> 今すぐ同期
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Seed Data option -->
+                <div class="pt-1 text-center">
+                    <button onclick="loadSampleData()" class="text-xs text-mustard-600 hover:text-mustard-500 font-bold underline">
+                        デモ用サンプルデータを読み込む
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-cafedark text-amber-50 text-xs sm:text-sm px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2 transition-opacity duration-300 opacity-0 pointer-events-none z-50 border border-mustard-500">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-mustard-400"></i>
+        <span id="toast-message">メッセージ</span>
+    </div>
+
+    <!-- Main Application Logic Script -->
+    <script>
+        // --- State Management ---
+        let appData = {
+            materials: [],
+            tasks: [],
+            gasUrl: ""
+        };
+
+        let currentWeekStartDate = new Date();
+        let progressChartInstance = null;
+
+        // --- Initialization ---
+        window.onload = function () {
+            // Set currentWeekStartDate to Monday of current week
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const distanceToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+            currentWeekStartDate.setDate(today.getDate() + distanceToMonday);
+            currentWeekStartDate.setHours(0, 0, 0, 0);
+
+            // Load saved data from localStorage
+            loadDataFromStorage();
+
+            // Render view
+            renderApp();
+        };
+
+        // --- Data Persistence (LocalStorage) ---
+        function loadDataFromStorage() {
+            const savedData = localStorage.getItem('study_tracker_data');
+            if (savedData) {
+                try {
+                    appData = JSON.parse(savedData);
+                } catch (e) {
+                    console.error("Failed to parse local storage data", e);
+                }
+            } else {
+                // Initial Default Material with Warm Colors
+                appData.materials = [
+                    { id: 'mat-1', title: 'カフェで覚える英単語', totalPages: 200, color: '#EAB308' },
+                    { id: 'mat-2', title: '珈琲と楽しむ読書ノート', totalPages: 150, color: '#5C4A3E' }
+                ];
+                saveDataToStorage();
+            }
+        }
+
+        function saveDataToStorage() {
+            localStorage.setItem('study_tracker_data', JSON.stringify(appData));
+        }
+
+        // --- Helper: Date Formatter YYYY-MM-DD ---
+        function formatDateToYYYYMMDD(dateObj) {
+            const yyyy = dateObj.getFullYear();
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // --- Rendering Core ---
+        function renderApp() {
+            renderKPIs();
+            renderWeeklyGrid();
+            renderMaterialsList();
+            renderChart();
+            populateTaskMaterialDropdown();
+        }
+
+        // --- KPI Calculation & Rendering ---
+        function renderKPIs() {
+            const totalMaterials = appData.materials.length;
+            
+            let totalTargetPages = 0;
+            let totalCompletedPages = 0;
+
+            appData.tasks.forEach(task => {
+                const pagesPlanned = Math.max(0, task.endPage - task.startPage + 1);
+                totalTargetPages += pagesPlanned;
+
+                if (task.completedPage && task.completedPage >= task.startPage) {
+                    const pagesDone = Math.max(0, task.completedPage - task.startPage + 1);
+                    totalCompletedPages += pagesDone;
+                }
+            });
+
+            const overallProgressRate = totalTargetPages > 0 
+                ? Math.round((totalCompletedPages / totalTargetPages) * 100) 
+                : 0;
+
+            document.getElementById('kpi-total-materials').innerText = totalMaterials;
+            document.getElementById('kpi-completed-pages').innerText = `${totalCompletedPages} P`;
+            document.getElementById('kpi-target-pages').innerText = `${totalTargetPages} P`;
+            document.getElementById('kpi-progress-rate').innerText = `${overallProgressRate}%`;
+        }
+
+        // --- Weekly Grid Rendering ---
+        function renderWeeklyGrid() {
+            const gridContainer = document.getElementById('weekly-grid');
+            gridContainer.innerHTML = '';
+
+            const weekDays = ['月', '火', '水', '木', '金', '土', '日'];
+            const start = new Date(currentWeekStartDate);
+
+            // Update Week Label Header
+            const endOfWeek = new Date(start);
+            endOfWeek.setDate(start.getDate() + 6);
+            const dateFormatter = d => `${d.getMonth() + 1}/${d.getDate()}`;
+            document.getElementById('current-week-label').innerText = `${dateFormatter(start)} 〜 ${dateFormatter(endOfWeek)}`;
+
+            // Build 7 Day Columns
+            for (let i = 0; i < 7; i++) {
+                const dayDate = new Date(start);
+                dayDate.setDate(start.getDate() + i);
+                const dateStr = formatDateToYYYYMMDD(dayDate);
+
+                const isToday = formatDateToYYYYMMDD(new Date()) === dateStr;
+
+                // Find tasks for this day
+                const dayTasks = appData.tasks.filter(t => t.date === dateStr);
+
+                const dayCard = document.createElement('div');
+                dayCard.className = `bg-white/90 border rounded-2xl p-2.5 flex flex-col min-h-[260px] ${
+                    isToday ? 'border-mustard-500 ring-2 ring-mustard-400/40 bg-yellow-50/30' : 'border-craft-200'
+                }`;
+
+                // Header for each day
+                const dayHeader = `
+                    <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-craft-100">
+                        <span class="text-xs font-bold ${i >= 5 ? (i === 5 ? 'text-amber-700' : 'text-rose-700') : 'text-craft-800'}">
+                            ${weekDays[i]} <span class="text-craft-400 font-normal">${dayDate.getDate()}日</span>
+                        </span>
+                        <button onclick="openAddTaskModal('${dateStr}')" class="text-craft-400 hover:text-mustard-600 text-xs p-1">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                `;
+
+                // Task cards list
+                let tasksHtml = '<div class="space-y-2 flex-grow overflow-y-auto max-h-[200px] custom-scrollbar">';
+                if (dayTasks.length === 0) {
+                    tasksHtml += `<div class="text-[11px] text-craft-300 text-center mt-6">予定なし</div>`;
+                } else {
+                    dayTasks.forEach(task => {
+                        const material = appData.materials.find(m => m.id === task.materialId);
+                        const matColor = material ? material.color : '#EAB308';
+                        const isDone = task.completedPage !== null && task.completedPage >= task.startPage;
+
+                        tasksHtml += `
+                            <div onclick="openEditTaskModal('${task.id}')" class="bg-[#FAF6F0] border border-craft-200 p-2 rounded-xl shadow-sm cursor-pointer hover:border-mustard-500 transition group relative border-l-4" style="border-left-color: ${matColor};">
+                                <div class="text-xs font-bold text-cafedark truncate mb-1">${material ? material.title : '不明な教材'}</div>
+                                <div class="text-[11px] text-craft-500 flex justify-between items-center">
+                                    <span>P.${task.startPage} - ${task.endPage}</span>
+                                    ${isDone 
+                                        ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded-md font-bold"><i class="fa-solid fa-check"></i> 達成</span>`
+                                        : `<span class="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded-md">未達成</span>`
+                                    }
+                                </div>
+                                ${task.memo ? `<div class="text-[10px] text-craft-400 truncate mt-1">${task.memo}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+                tasksHtml += '</div>';
+
+                dayCard.innerHTML = dayHeader + tasksHtml;
+                gridContainer.appendChild(dayCard);
+            }
+        }
+
+        // --- Weekly Navigation ---
+        function changeWeek(offsetDays) {
+            currentWeekStartDate.setDate(currentWeekStartDate.getDate() + (offsetDays * 7));
+            renderWeeklyGrid();
+            renderChart();
+        }
+
+        function resetToCurrentWeek() {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const distanceToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+            currentWeekStartDate = new Date(today.setDate(today.getDate() + distanceToMonday));
+            currentWeekStartDate.setHours(0, 0, 0, 0);
+            renderWeeklyGrid();
+            renderChart();
+        }
+
+        // --- Render Materials Progress List ---
+        function renderMaterialsList() {
+            const container = document.getElementById('materials-list');
+            container.innerHTML = '';
+
+            if (appData.materials.length === 0) {
+                container.innerHTML = `<p class="text-xs text-craft-400 text-center py-4">登録済みの教材がありません</p>`;
+                return;
+            }
+
+            appData.materials.forEach(mat => {
+                // Find highest completed page recorded
+                const matTasks = appData.tasks.filter(t => t.materialId === mat.id && t.completedPage);
+                let currentMaxPage = 0;
+                matTasks.forEach(t => {
+                    if (t.completedPage > currentMaxPage) currentMaxPage = t.completedPage;
+                });
+
+                const progressPercent = Math.min(100, Math.round((currentMaxPage / mat.totalPages) * 100));
+
+                const item = document.createElement('div');
+                item.className = 'bg-white/80 border border-craft-200 p-3 rounded-2xl flex flex-col space-y-2 group relative';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm" style="background-color: ${mat.color};"></span>
+                            <span class="text-xs font-bold text-cafedark truncate max-w-[120px] sm:max-w-[150px]">${mat.title}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-semibold text-craft-500">${currentMaxPage} / ${mat.totalPages} P</span>
+                            <button onclick="openDeleteMaterialModal('${mat.id}')" class="text-craft-400 hover:text-rose-600 p-1 rounded transition text-xs" title="教材を削除">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="w-full bg-craft-200 rounded-full h-2.5 overflow-hidden">
+                        <div class="h-2.5 rounded-full transition-all duration-500" style="width: ${progressPercent}%; background-color: ${mat.color};"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-craft-400 font-medium">
+                        <span>進捗率</span>
+                        <span>${progressPercent}%</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // --- Render Progress Bar/Line Chart ---
+        function renderChart() {
+            const timeframe = document.getElementById('chart-timeframe').value;
+            const ctx = document.getElementById('progressChart').getContext('2d');
+
+            let labels = [];
+            let plannedData = [];
+            let actualData = [];
+
+            if (timeframe === 'week') {
+                const start = new Date(currentWeekStartDate);
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(start);
+                    d.setDate(start.getDate() + i);
+                    const dateStr = formatDateToYYYYMMDD(d);
+
+                    labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
+
+                    let plannedPages = 0;
+                    let actualPages = 0;
+
+                    appData.tasks.filter(t => t.date === dateStr).forEach(t => {
+                        plannedPages += Math.max(0, t.endPage - t.startPage + 1);
+                        if (t.completedPage) {
+                            actualPages += Math.max(0, t.completedPage - t.startPage + 1);
+                        }
+                    });
+
+                    plannedData.push(plannedPages);
+                    actualData.push(actualPages);
+                }
+            } else {
+                const today = new Date();
+                for (let i = 29; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(today.getDate() - i);
+                    const dateStr = formatDateToYYYYMMDD(d);
+
+                    labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
+
+                    let plannedPages = 0;
+                    let actualPages = 0;
+
+                    appData.tasks.filter(t => t.date === dateStr).forEach(t => {
+                        plannedPages += Math.max(0, t.endPage - t.startPage + 1);
+                        if (t.completedPage) {
+                            actualPages += Math.max(0, t.completedPage - t.startPage + 1);
+                        }
+                    });
+
+                    plannedData.push(plannedPages);
+                    actualData.push(actualPages);
+                }
+            }
+
+            if (progressChartInstance) {
+                progressChartInstance.destroy();
+            }
+
+            progressChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '達成ページ数',
+                            data: actualData,
+                            backgroundColor: '#EAB308',
+                            borderColor: '#CA8A04',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: '予定ページ数',
+                            data: plannedData,
+                            backgroundColor: 'rgba(92, 74, 62, 0.2)',
+                            borderColor: '#5C4A3E',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { 
+                                font: { family: 'Zen Maru Gothic', size: 11 },
+                                color: '#4A3A2C'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw} ページ`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Zen Maru Gothic', size: 10 }, color: '#9B7A5D' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, font: { family: 'Zen Maru Gothic', size: 10 }, color: '#9B7A5D' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Modals Logic ---
+        function openAddTaskModal(defaultDate = null) {
+            if (appData.materials.length === 0) {
+                showToast('先に教材を登録してください', 'amber');
+                openAddMaterialModal();
+                return;
+            }
+
+            document.getElementById('task-modal-title').innerText = '学習スケジュールの追加';
+            document.getElementById('task-form').reset();
+            document.getElementById('task-id').value = '';
+            document.getElementById('btn-delete-task').classList.add('hidden');
+
+            const targetDate = defaultDate || formatDateToYYYYMMDD(new Date());
+            document.getElementById('task-date').value = targetDate;
+
+            document.getElementById('task-modal').classList.remove('hidden');
+        }
+
+        function openEditTaskModal(taskId) {
+            const task = appData.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('task-modal-title').innerText = 'スケジュールの編集';
+            document.getElementById('task-id').value = task.id;
+            document.getElementById('task-material').value = task.materialId;
+            document.getElementById('task-date').value = task.date;
+            document.getElementById('task-start-page').value = task.startPage;
+            document.getElementById('task-end-page').value = task.endPage;
+            document.getElementById('task-completed-page').value = task.completedPage !== null ? task.completedPage : '';
+            document.getElementById('task-memo').value = task.memo || '';
+
+            document.getElementById('btn-delete-task').classList.remove('hidden');
+            document.getElementById('task-modal').classList.remove('hidden');
+        }
+
+        function openAddMaterialModal() {
+            document.getElementById('material-form').reset();
+            document.getElementById('material-modal').classList.remove('hidden');
+        }
+
+        function openDeleteMaterialModal(materialId) {
+            document.getElementById('delete-material-id').value = materialId;
+            document.getElementById('delete-material-modal').classList.remove('hidden');
+        }
+
+        function confirmDeleteMaterial() {
+            const materialId = document.getElementById('delete-material-id').value;
+            if (!materialId) return;
+
+            appData.materials = appData.materials.filter(m => m.id !== materialId);
+            appData.tasks = appData.tasks.filter(t => t.materialId !== materialId);
+
+            saveDataToStorage();
+            renderApp();
+            closeModal('delete-material-modal');
+            showToast('教材と関連タスクを削除しました', 'rose');
+        }
+
+        function openSyncModal() {
+            document.getElementById('gas-url-input').value = appData.gasUrl || '';
+            document.getElementById('sync-modal').classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function populateTaskMaterialDropdown() {
+            const select = document.getElementById('task-material');
+            select.innerHTML = '';
+            appData.materials.forEach(mat => {
+                const opt = document.createElement('option');
+                opt.value = mat.id;
+                opt.text = mat.title;
+                select.appendChild(opt);
+            });
+        }
+
+        // --- Data Submit Handlers ---
+        function handleSaveTask(e) {
+            e.preventDefault();
+            const taskId = document.getElementById('task-id').value;
+            const materialId = document.getElementById('task-material').value;
+            const date = document.getElementById('task-date').value;
+            const startPage = parseInt(document.getElementById('task-start-page').value, 10);
+            const endPage = parseInt(document.getElementById('task-end-page').value, 10);
+            const completedInput = document.getElementById('task-completed-page').value;
+            const completedPage = completedInput !== '' ? parseInt(completedInput, 10) : null;
+            const memo = document.getElementById('task-memo').value;
+
+            if (taskId) {
+                const taskIndex = appData.tasks.findIndex(t => t.id === taskId);
+                if (taskIndex !== -1) {
+                    appData.tasks[taskIndex] = { id: taskId, materialId, date, startPage, endPage, completedPage, memo };
+                }
+            } else {
+                const newTask = {
+                    id: 'task-' + Date.now(),
+                    materialId,
+                    date,
+                    startPage,
+                    endPage,
+                    completedPage,
+                    memo
+                };
+                appData.tasks.push(newTask);
+            }
+
+            saveDataToStorage();
+            renderApp();
+            closeModal('task-modal');
+            showToast('タスクを保存しました', 'emerald');
+        }
+
+        function handleDeleteTask() {
+            const taskId = document.getElementById('task-id').value;
+            if (!taskId) return;
+
+            appData.tasks = appData.tasks.filter(t => t.id !== taskId);
+            saveDataToStorage();
+            renderApp();
+            closeModal('task-modal');
+            showToast('タスクを削除しました', 'rose');
+        }
+
+        function handleSaveMaterial(e) {
+            e.preventDefault();
+            const title = document.getElementById('mat-title').value;
+            const totalPages = parseInt(document.getElementById('mat-total-pages').value, 10);
+            const colorRadios = document.getElementsByName('mat-color');
+            let selectedColor = '#EAB308';
+            for (let r of colorRadios) {
+                if (r.checked) {
+                    selectedColor = r.value;
+                    break;
+                }
+            }
+
+            const newMat = {
+                id: 'mat-' + Date.now(),
+                title,
+                totalPages,
+                color: selectedColor
+            };
+
+            appData.materials.push(newMat);
+            saveDataToStorage();
+            renderApp();
+            closeModal('material-modal');
+            showToast('新規教材を追加しました', 'emerald');
+        }
+
+        // --- Spreadsheet / CSV Import & Export ---
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Type,ID,Title_or_MaterialID,TotalPages_or_Date,Color_or_StartPage,EndPage,CompletedPage,Memo\n";
+
+            appData.materials.forEach(m => {
+                const row = `Material,${m.id},"${m.title.replace(/"/g, '""')}",${m.totalPages},${m.color},,,`;
+                csvContent += row + "\n";
+            });
+
+            appData.tasks.forEach(t => {
+                const row = `Task,${t.id},${t.materialId},${t.date},${t.startPage},${t.endPage},${t.completedPage !== null ? t.completedPage : ''},"${(t.memo || '').replace(/"/g, '""')}"`;
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `study_schedule_${formatDateToYYYYMMDD(new Date())}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast('CSVファイルをダウンロードしました', 'emerald');
+        }
+
+        function importFromCSV(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const text = event.target.result;
+                const lines = text.split('\n');
+
+                let importedMaterials = [];
+                let importedTasks = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    const cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
+                    if (!cols || cols.length < 5) continue;
+
+                    const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"'));
+                    const type = cleanCols[0];
+
+                    if (type === 'Material') {
+                        importedMaterials.push({
+                            id: cleanCols[1],
+                            title: cleanCols[2],
+                            totalPages: parseInt(cleanCols[3], 10) || 100,
+                            color: cleanCols[4] || '#EAB308'
+                        });
+                    } else if (type === 'Task') {
+                        importedTasks.push({
+                            id: cleanCols[1],
+                            materialId: cleanCols[2],
+                            date: cleanCols[3],
+                            startPage: parseInt(cleanCols[4], 10) || 1,
+                            endPage: parseInt(cleanCols[5], 10) || 10,
+                            completedPage: cleanCols[6] ? parseInt(cleanCols[6], 10) : null,
+                            memo: cleanCols[7] || ''
+                        });
+                    }
+                }
+
+                if (importedMaterials.length > 0 || importedTasks.length > 0) {
+                    appData.materials = importedMaterials;
+                    appData.tasks = importedTasks;
+                    saveDataToStorage();
+                    renderApp();
+                    closeModal('sync-modal');
+                    showToast('CSVからデータを正常に読み込みました', 'emerald');
+                } else {
+                    showToast('有効なデータが見つかりませんでした', 'rose');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- GAS Webhook Realtime Sync ---
+        function saveGasUrl() {
+            const url = document.getElementById('gas-url-input').value.trim();
+            appData.gasUrl = url;
+            saveDataToStorage();
+            showToast('GAS URL設定を保存しました', 'emerald');
+        }
+
+        async function syncWithGAS() {
+            if (!appData.gasUrl) {
+                showToast('GASのWebアプリURLを設定してください', 'amber');
+                return;
+            }
+
+            try {
+                showToast('スプレッドシートと同期中...', 'indigo');
+                const response = await fetch(appData.gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appData)
+                });
+
+                if (response.ok) {
+                    showToast('スプレッドシートへの保存・同期が完了しました', 'emerald');
+                } else {
+                    showToast('同期エラーが発生しました', 'rose');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('CORS/ネットワークエラー: 直接API送信できませんでした', 'amber');
+            }
+        }
+
+        // --- Demo Sample Data Loader ---
+        function loadSampleData() {
+            const startOfWeek = new Date(currentWeekStartDate);
+
+            appData.materials = [
+                { id: 'mat-1', title: 'カフェで覚える英単語', totalPages: 200, color: '#EAB308' },
+                { id: 'mat-2', title: '珈琲と楽しむ読書ノート', totalPages: 150, color: '#5C4A3E' },
+                { id: 'mat-3', title: 'オーガニックライフ実践テキスト', totalPages: 180, color: '#84CC16' }
+            ];
+
+            appData.tasks = [];
+
+            for (let i = 0; i < 5; i++) {
+                const d = new Date(startOfWeek);
+                d.setDate(startOfWeek.getDate() + i);
+                const dateStr = formatDateToYYYYMMDD(d);
+
+                appData.tasks.push({
+                    id: `task-sample-${i}-1`,
+                    materialId: 'mat-1',
+                    date: dateStr,
+                    startPage: (i * 15) + 1,
+                    endPage: (i * 15) + 15,
+                    completedPage: (i < 2) ? (i * 15) + 15 : null,
+                    memo: `Lesson ${i + 1} の単語暗記`
+                });
+
+                appData.tasks.push({
+                    id: `task-sample-${i}-2`,
+                    materialId: 'mat-2',
+                    date: dateStr,
+                    startPage: (i * 20) + 1,
+                    endPage: (i * 20) + 20,
+                    completedPage: (i < 3) ? (i * 20) + 20 : null,
+                    memo: '読書と感想の整理'
+                });
+            }
+
+            saveDataToStorage();
+            renderApp();
+            closeModal('sync-modal');
+            showToast('サンプルデータを読み込みました', 'emerald');
+        }
+
+        // --- Notification Toast Helper ---
+        function showToast(message, color = 'emerald') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.innerText = message;
+
+            if (color === 'emerald') {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            } else if (color === 'rose') {
+                toastIcon.className = 'fa-solid fa-circle-xmark text-rose-400';
+            } else if (color === 'amber') {
+                toastIcon.className = 'fa-solid fa-triangle-exclamation text-mustard-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-info text-amber-300';
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
